@@ -19,7 +19,7 @@ class Attendance(models.Model):
     session = models.ForeignKey(AttendanceSession, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     attendanded_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICE)
     reason = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
