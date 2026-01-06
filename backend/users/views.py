@@ -49,7 +49,7 @@ class UserDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         serializer = UserSerializers(user)
-        return Response({"User": serializer.data}, status=status.HTTP_200_OK)
+        return Response({"user": serializer.data}, status=status.HTTP_200_OK)
 
 
 class UserCodeView(APIView):
