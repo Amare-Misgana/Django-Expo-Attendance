@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Attendance, AttendanceSession
 from .serializers import AttendanceSerializer, AttendanceSessionSerializer
+from django.core import signing
 
 
 class AttendanceSessionView(APIView):
@@ -219,3 +220,57 @@ class AttendanceView(APIView):
                 {"error": f"Session with '{session_id}' doesn't exists."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+class AttendanceViaCodeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        code = (request.data.get("code") or "").strip()
+        attendance_status = (request.data.get("attendance_status") or "").strip()
+        session_id = (request.data.get("session_id") or "").strip()
+
+        errors = {}
+        if attendance_status.lower() not in [
+            "present",
+            "late",
+            "absent",
+        ]:
+            errors["status"] = "Invalid status"
+
+        if not code:
+            errors["code"] = "Code is required"
+
+        if not session_id:
+            errors["session_id"] = "Session id is required"
+
+        if code:
+            try:
+                user_data = signing.loads(code)
+                user = User.objects.get(id=user_data.id)
+            except signing.BadSignature:
+                errors["code"] = "Invalid code"
+            except User.DoesNotExist:
+                errors["code"] = "User doesn't exist"
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        session = AttendanceSession.objects.get(id=session_id)
+        attendance_exists = Attendance.objects.filter(
+            user=user, session=session
+        ).exists()
+
+        if attendance_exists:
+            return Response(
+                {"error": "Attendance recored already set for this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        Attendance.objects.create(user=user, session=session, status=attendance_status)
+        return Response(
+            {"message": "Attendance set successfully."}, status=status.HTTP_200_OK
+        )
+
+
