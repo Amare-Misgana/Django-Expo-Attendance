@@ -8,6 +8,9 @@ class AttendanceSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_closed = models.BooleanField(default=False)
 
+    def __str__(self):
+        return f"{self.title} - {self.is_closed}"
+
 
 class Attendance(models.Model):
     STATUS_CHOICE = (
