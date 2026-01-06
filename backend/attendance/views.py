@@ -27,6 +27,15 @@ class AttendanceSessionView(APIView):
             {"errors": serializer.error_messages}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    def patch(self, request):
+        serializer = AttendanceSessionSerializer(request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"session": serializer.data}, status=status.HTTP_200_OK)
+        return Response(
+            {"errors", serializer.error_messages}, status=status.HTTP_400_BAD_REQUEST
+        )
+
     def get(self, request, session_id):
         try:
             session = AttendanceSession.objects.get(id=session_id)
@@ -57,8 +66,8 @@ class AttendanceView(APIView):
 
     def post(self, request):
         attendance_status = (request.data.get("status") or "").strip()
-        user_id = (request.data.get("status") or "").strip()
-        session_id = (request.data.get("status") or "").strip()
+        user_id = (request.data.get("user_id") or "").strip()
+        session_id = (request.data.get("session_id") or "").strip()
 
         errors = {}
         if attendance_status.lower() not in [
@@ -84,6 +93,10 @@ class AttendanceView(APIView):
         try:
             user = User.objects.get(id=user_id)
             session = AttendanceSession.objects.get(id=session_id)
+            if session.is_closed:
+                return Response(
+                    {"error": "Session ended."}, status=status.HTTP_406_NOT_ACCEPTABLE
+                )
             attendance_exists = Attendance.objects.filter(
                 user=user, session=session
             ).exists()
@@ -117,8 +130,8 @@ class AttendanceView(APIView):
 
     def patch(self, request):
         attendance_status = (request.data.get("status") or "").strip()
-        user_id = (request.data.get("status") or "").strip()
-        session_id = (request.data.get("status") or "").strip()
+        user_id = (request.data.get("user_id") or "").strip()
+        session_id = (request.data.get("session_id") or "").strip()
 
         errors = {}
         if attendance_status.lower() not in [
@@ -176,8 +189,8 @@ class AttendanceView(APIView):
             )
 
     def delete(self, request):
-        user_id = (request.data.get("status") or "").strip()
-        session_id = (request.data.get("status") or "").strip()
+        user_id = (request.data.get("user_id") or "").strip()
+        session_id = (request.data.get("session_id") or "").strip()
 
         errors = {}
 
@@ -258,6 +271,10 @@ class AttendanceViaCodeView(APIView):
             return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
         session = AttendanceSession.objects.get(id=session_id)
+        if session.is_closed:
+            return Response(
+                {"error": "Session ended."}, status=status.HTTP_406_NOT_ACCEPTABLE
+            )
         attendance_exists = Attendance.objects.filter(
             user=user, session=session
         ).exists()
@@ -274,3 +291,20 @@ class AttendanceViaCodeView(APIView):
         )
 
 
+class ClosingAttendanceSession(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        session_id = (request.data.get("session_id") or "").strip()
+
+        try:
+            session = AttendanceSession.objects.get(id=session_id)
+        except AttendanceSession.DoesNotExist:
+            return Response(
+                {"error": f"Session with '{session_id}' doesn't exist"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        session.is_closed = True
+        session.save()
