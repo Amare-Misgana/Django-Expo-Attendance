@@ -15,7 +15,7 @@ class AttendanceSession(models.Model):
 class Attendance(models.Model):
     STATUS_CHOICE = (
         ("absent", "Absent"),
-        ("present", "Late"),
+        ("present", "Present"),
         ("late", "Late"),
         ("secial_case", "Special Case"),
     )

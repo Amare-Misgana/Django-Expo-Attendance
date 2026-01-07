@@ -177,3 +177,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# Settings
+IS_TWOFA_MANDATORY = True
+EMAIL = "codeamare@gmail.com"
