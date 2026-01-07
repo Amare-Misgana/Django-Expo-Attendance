@@ -62,7 +62,9 @@ class UserSerializer(serializers.ModelSerializer):
             profile = obj.profile
             return ProfileSerializer(profile, context=self.context).data
         except Profile.DoesNotExist:
-            return None
+            user = obj
+            profile = Profile.objects.create(user=user)
+            return ProfileSerializer(profile, context=self.context).data
 
     def get_code(self, obj):
         user_data = {

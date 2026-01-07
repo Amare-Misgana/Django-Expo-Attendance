@@ -20,6 +20,17 @@ IS_TWOFA_MANDATORY = settings.IS_TWOFA_MANDATORY
 EMAIL = settings.EMAIL
 
 
+class GetUserView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        users = User.objects.filter(is_staff=False)
+        return Response(
+            {"users": UserSerializer(users, many=True).data}, status=status.HTTP_200_OK
+        )
+
+
 class UserView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]

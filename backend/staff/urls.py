@@ -1,7 +1,9 @@
 from django.urls import path
-from .views import GetUserView, AttendanceSessionView
+from .views import AttendanceViaCodeView, AttendanceSessionView, AttendanceView
 
 urlpatterns = [
-    path("users/", GetUserView.as_view()),
-    path("sessions/", AttendanceSessionView.as_view()),
+    path("", AttendanceView.as_view()),
+    path("session/", AttendanceSessionView.as_view()),
+    path("session/<session_id>/", AttendanceSessionView.as_view()),
+    path("session/code/", AttendanceViaCodeView.as_view()),
 ]
