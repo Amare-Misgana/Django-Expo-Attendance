@@ -5,10 +5,12 @@ from .views import (
     LoginView,
     SendVerificationCodeView,
     VerifyCodeView,
+    EditProfileView,
 )
 
 urlpatterns = [
     path("", UserView.as_view()),
+    path("profile/edit/", EditProfileView.as_view()),
     path("<int:user_id>/", UserDetailView.as_view()),
     path("login/", LoginView.as_view()),
     path("verify/", VerifyCodeView.as_view()),

@@ -2,12 +2,42 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.core import signing
 from .models import Profile
+from rest_framework.validators import UniqueValidator
+import time
+import environ
+import cloudinary
+import cloudinary.uploader
+import cloudinary.utils
+from pathlib import Path
+from django.conf import settings
+
+env = environ.Env()
+
+IS_TWOFA_MANDATORY = settings.IS_TWOFA_MANDATORY
+
+BASE_DIR = Path(__file__).resolve().parent
+environ.Env.read_env(str(BASE_DIR / ".env"))
+
+cloudinary.config(
+    cloud_name=env("CLOUD_NAME"),
+    api_key=env("API_KEY"),
+    api_secret=env("API_SECRET"),
+    secure=True,
+)
 
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     code = serializers.SerializerMethodField()
-    # profile = "ProfileSerializer"(read_only=True)
+    profile = serializers.SerializerMethodField()
+    username = serializers.CharField(
+        required=True,
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(), message="This username is already taken."
+            )
+        ],
+    )
 
     class Meta:
         model = User
@@ -21,8 +51,18 @@ class UserSerializer(serializers.ModelSerializer):
             "last_login",
             "date_joined",
             "code",
-            # "profile",
+            "profile",
         ]
+        read_only_fields = ["date_joined", "code", "last_login"]
+
+    def get_profile(self, obj):
+        from .serializers import ProfileSerializer
+
+        try:
+            profile = obj.profile
+            return ProfileSerializer(profile, context=self.context).data
+        except Profile.DoesNotExist:
+            return None
 
     def get_code(self, obj):
         user_data = {
@@ -54,13 +94,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    profile_pic_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
         fields = [
             "id",
-            "user",
             "twofa_enabled",
             "profile_pic_id",
             "profile_pic_url",
@@ -85,136 +124,46 @@ class ProfileSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        return instance
 
+    def validate_twofa_enabled(self, value):
+        request = self.context.get("request")
 
-# from rest_framework import serializers
-# from django.contrib.auth.models import User
-# from django.core import signing
-# from .models import Profile
-# import time
-# import environ
-# import cloudinary
-# import cloudinary.utils
-# from pathlib import Path
+        if not request or not request.user.is_authenticated:
+            return value
 
-# env = environ.Env()
-# BASE_DIR = Path(__file__).resolve().parent
-# environ.Env.read_env(str(BASE_DIR / ".env"))
+        profile = self.instance  # current profile (important)
 
-# cloudinary.config(
-#     cloud_name=env("CLOUD_NAME"),
-#     api_key=env("API_KEY"),
-#     api_secret=env("API_SECRET"),
-#     secure=True,
-# )
+        if IS_TWOFA_MANDATORY and profile.twofa_enabled and value is False:
+            raise serializers.ValidationError(
+                "You can't disable two-factor authentication."
+            )
 
+        return value
 
-# class UserSerializers(serializers.ModelSerializer):
-#     password = serializers.CharField(write_only=True, required=True)
-#     code = serializers.SerializerMethodField()
-#     profile = "ProfileSerializer"(read_only=True)
+    def get_profile_pic_url(self, obj):
+        if obj.profile_pic_id:
+            try:
+                return self.get_signed_url(obj.profile_pic_id)
+            except Exception as e:
+                print(f"Cloudinary error: {e}")
+                return None
+        return None
 
-#     class Meta:
-#         model = User
-#         fields = [
-#             "id",
-#             "first_name",
-#             "last_name",
-#             "username",
-#             "email",
-#             "password",
-#             "last_login",
-#             "date_joined",
-#             "code",
-#             "profile",
-#         ]
+    # --- helper methods ---
+    def upload_private_file(self, file):
+        result = cloudinary.uploader.upload(
+            file, folder="users/profiles", resource_type="image", type="authenticated"
+        )
+        return result["public_id"]
 
-#     def get_code(self, obj):
-#         user_data = {
-#             "id": obj.id,
-#             "username": obj.username,
-#         }
-#         if obj.id and obj.username:
-
-#             return signing.dumps(user_data)
-#         return None
-
-#     def create(self, validated_data):
-#         password = validated_data.pop("password")
-
-#         user = User(**validated_data)
-#         user.set_password(password)
-#         user.save()
-#         return user
-
-#     def update(self, instance, validated_data):
-#         password = validated_data.pop("password", None)
-
-#         for attr, value in validated_data.items():
-#             setattr(instance, attr, value)
-#         if password:
-#             instance.set_password(password)
-#         instance.save()
-#         return instance
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     user = UserSerializers(read_only=True)
-
-#     class Meta:
-#         model = Profile
-#         fields = [
-#             "id",
-#             "user",
-#             "twofa_enabled",
-#             "profile_pic_id",
-#             "profile_pic_url",
-#         ]
-
-#     def create(self, validated_data):
-#         profile_pic_file = self.context["request"].FILES.get("profile_pic")
-#         if profile_pic_file:
-#             validated_data["profile_pic_id"] = self.upload_private_file(
-#                 profile_pic_file
-#             )
-#         profile = Profile(**validated_data)
-#         profile.save()
-
-#     def update(self, instance, validated_data):
-#         profile_pic_file = self.context["request"].FILES.get("profile_pic")
-#         if profile_pic_file:
-#             validated_data["profile_pic_id"] = self.upload_private_file(
-#                 profile_pic_file
-#             )
-
-#         for attr, value in validated_data.items():
-#             setattr(instance, attr, value)
-#         instance.save()
-
-#     def get_profile_pic_url(self, obj):
-#         if obj.profile_pic_id:
-#             try:
-#                 return self.get_signed_url(obj.profile_pic_id)
-#             except Exception as e:
-#                 # Log the error but don't crash the whole API request
-#                 print(f"Cloudinary error: {e}")
-#                 return None
-#         return None
-
-#     # --- helper methods ---
-#     def upload_private_file(self, file):
-#         result = cloudinary.uploader.upload(
-#             file, folder="users/profiles", resource_type="image", type="authenticated"
-#         )
-#         return result["public_id"]
-
-#     def get_signed_url(self, public_id, expires_in=30):
-#         url, _ = cloudinary.utils.cloudinary_url(
-#             public_id,
-#             resource_type="image",
-#             type="authenticated",
-#             sign_url=True,
-#             secure=True,
-#             expires_at=int(time.time()) + expires_in,
-#         )
-#         return url
+    def get_signed_url(self, public_id, expires_in=30):
+        url, _ = cloudinary.utils.cloudinary_url(
+            public_id,
+            resource_type="image",
+            type="authenticated",
+            sign_url=True,
+            secure=True,
+            expires_at=int(time.time()) + expires_in,
+        )
+        return url

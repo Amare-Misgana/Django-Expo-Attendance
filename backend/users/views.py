@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .serializers import UserSerializer
+from .serializers import UserSerializer, ProfileSerializer
 from django.core import signing
 from .models import VerifyEmail, Profile
 from django.contrib.auth import authenticate
@@ -34,10 +34,11 @@ class UserView(APIView):
         user = request.user
         serializer = UserSerializer(user, request.data, partial=True)
         if serializer.is_valid():
+            serializer.save()
             return Response({"user": serializer.data}, status=status.HTTP_200_OK)
 
         return Response(
-            {"errors": serializer.error_messages}, status=status.HTTP_400_BAD_REQUEST
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
     def delete(self, request):
@@ -86,7 +87,7 @@ class LoginView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        profile = Profile.objects.get_or_create(user=user)
+        profile, created = Profile.objects.get_or_create(user=user)
 
         if IS_TWOFA_MANDATORY or profile.twofa_enabled:
             profile.twofa_enabled = True
@@ -125,7 +126,7 @@ class SendVerificationCodeView(APIView):
         username = (request.data.get("username") or "").strip()
         if not username:
             return Response(
-                {"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         user = User.objects.filter(username=username).first()
@@ -144,9 +145,8 @@ class SendVerificationCodeView(APIView):
         if old_email_verify:
             old_email_verify.delete()
 
-        email_verif = VerifyEmail.objects.create(user=user)
-
         try:
+            email_verif = VerifyEmail.objects.create(user=user)
             send_mail(
                 subject="Verify your email",
                 message=f"Your verification code is {email_verif.code}",
@@ -158,7 +158,7 @@ class SendVerificationCodeView(APIView):
 
             return Response(
                 {"message": f"Unable to send the code{str(e)}."},
-                status=status.HTTP_200_OK,
+                status=status.HTTP_501_NOT_IMPLEMENTED,
             )
 
         return Response(
@@ -189,7 +189,7 @@ class VerifyCodeView(APIView):
 
         if not email_verify:
             return Response(
-                {"error": "Verificaiton code has not bmeen sent yet."},
+                {"error": "Verificaiton code has not been sent yet."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -225,6 +225,28 @@ class VerifyCodeView(APIView):
                 {"error": f"Something went wrong.{str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class EditProfileView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        profile = request.user.profile
+        serializer = ProfileSerializer(
+            instance=profile,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"profile": serializer.data}, status=status.HTTP_200_OK)
+
+        return Response(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 # class Register
