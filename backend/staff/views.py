@@ -458,3 +458,54 @@ class EndAttendanceSession(APIView):
                 )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DeleteUsersView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, user_id):
+        code = (request.data.get("code") or "").strip()
+        user = request.user
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": f"User with '{user_id}' doesn't exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        permission_verify = PermissionVerify.objects.filter(user=user).first()
+        if not permission_verify:
+            return Response(
+                {"error": "Permission code not sent yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if permission_verify.is_expired():
+            return Response(
+                {"error": "Permission code is expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not permission_verify.code == code:
+            return Response(
+                {"error": "Invalid permission code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+
+            try:
+                permission_verify.delete()
+                username = user.username
+                user.delete()
+                return Response(
+                    {"message": f"'{username}' deleted successfully."},
+                    status=status.HTTP_200_OK,
+                )
+            except Exception as e:
+                return Response(
+                    {"error": str(e)},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
