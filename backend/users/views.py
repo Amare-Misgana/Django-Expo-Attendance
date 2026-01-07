@@ -147,7 +147,7 @@ class SendVerificationCodeView(APIView):
                 {"error": "Invalid Email."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        if not user.username:
+        if not user.email:
             return Response(
                 {"error": "User doesn't have email."}, status=status.HTTP_404_NOT_FOUND
             )

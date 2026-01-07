@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "api",
     "users",
+    "staff",
     "attendance",
 ]
 
@@ -187,7 +188,6 @@ SIMPLE_JWT = {
 
 # Settings
 IS_TWOFA_MANDATORY = True
-EMAIL = "codeamare@gmail.com"
 
 
 # Email smtp
@@ -203,3 +203,4 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL = env("DEFAULT_FROM_EMAIL")
 DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER")
+EMAIL = DEFAULT_FROM_EMAIL

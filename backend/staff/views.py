@@ -8,6 +8,13 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from attendance.models import Attendance, AttendanceSession
 from attendance.serializers import AttendanceSerializer, AttendanceSessionSerializer
 from django.core import signing
+from django.db import transaction
+from .models import PermissionVerify
+from django.contrib.auth import authenticate
+from django.core.mail import send_mail
+from django.conf import settings
+
+EMAIL = settings.EMAIL
 
 
 class AttendanceSessionView(APIView):
@@ -46,8 +53,26 @@ class AttendanceSessionView(APIView):
         )
 
 
+class DeleteSessionView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
 
     def delete(self, request, session_id):
+        password = request.data.get("password") or None
+        if not password:
+            return Response(
+                {"error": "To delete a session, password is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        allowed_to_delete = request.user.check_password(password)
+
+        if not allowed_to_delete:
+            return Response(
+                {"error": "Invalid password."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             session = AttendanceSession.objects.get(id=session_id)
             session.delete()
@@ -61,14 +86,82 @@ class AttendanceSessionView(APIView):
             )
 
 
+class DeleteSessionViaCodeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        user = request.user
+        if not user.email:
+            return Response(
+                {"error": "User doesn't have email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_permission_verify = PermissionVerify.objects.filter(admin=user).first()
+        if old_permission_verify:
+            old_permission_verify.delete()
+
+        try:
+            permission_verify = PermissionVerify.objects.create(admin=user)
+            send_mail(
+                subject="Verify your email",
+                message=f"Your permission code is {permission_verify.code}, not that after performing the action, it can't be undone!",
+                from_email=EMAIL,
+                recipient_list=[user.email],
+            )
+        except Exception as e:
+
+            return Response(
+                {"message": f"Unable to send the code{str(e)}."},
+                status=status.HTTP_501_NOT_IMPLEMENTED,
+            )
+
+        return Response(
+            {"message": "verification code sent successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, session_id):
+        code = (request.data.get("code") or "").strip()
+
+        permission_verify = PermissionVerify.objects.filter().first()
+        if not permission_verify:
+            return Response(
+                {"error": "Permission code not sent yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not permission_verify.code == code:
+            return Response(
+                {"error": "Invalid permission code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+
+            try:
+                permission_verify.delete()
+                session = AttendanceSession.objects.get(id=session_id)
+                session.delete()
+                return Response(
+                    {"message": "Session deleted successfully."},
+                    status=status.HTTP_200_OK,
+                )
+            except AttendanceSession.DoesNotExist:
+                return Response(
+                    {"errors": [{"session": "Session doesn't exist."}]},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+
 class AttendanceView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
 
     def post(self, request):
         attendance_status = (request.data.get("status") or "").strip()
-        user_id = (request.data.get("user_id") or "").strip()
-        session_id = (request.data.get("session_id") or "").strip()
+        user_id = request.data.get("user_id") or None
+        session_id = request.data.get("session_id") or None
 
         errors = {}
         if attendance_status.lower() not in [
@@ -83,10 +176,12 @@ class AttendanceView(APIView):
         if not session_id:
             errors["session_id"] = "Session id is required"
 
+        reason = (request.data.get("reason") or "").strip()
         if attendance_status == "special_case":
-            reason = (request.data.get("reason") or "").strip()
             if not reason:
-                errors["special_case"] = "Special Case is required"
+                errors["reason"] = (
+                    "If it is set to 'speical case' reason is required.  "
+                )
 
         if errors:
             return Response({"errors": errors}, status=status.HTTP_404_NOT_FOUND)
@@ -242,8 +337,8 @@ class AttendanceViaCodeView(APIView):
 
     def post(self, request):
         code = (request.data.get("code") or "").strip()
-        attendance_status = (request.data.get("attendance_status") or "").strip()
-        session_id = (request.data.get("session_id") or "").strip()
+        attendance_status = (request.data.get("status") or "").strip()
+        session_id = request.data.get("session_id") or None
 
         errors = {}
         if attendance_status.lower() not in [
@@ -262,7 +357,7 @@ class AttendanceViaCodeView(APIView):
         if code:
             try:
                 user_data = signing.loads(code)
-                user = User.objects.get(id=user_data.id)
+                user = User.objects.get(id=user_data["id"])
             except signing.BadSignature:
                 errors["code"] = "Invalid code"
             except User.DoesNotExist:
@@ -292,12 +387,21 @@ class AttendanceViaCodeView(APIView):
         )
 
 
-class ClosingAttendanceSession(APIView):
+class EndAttendanceSession(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
 
     def post(self, request):
-        session_id = (request.data.get("session_id") or "").strip()
+        session_id = request.data.get("session_id") or None
+        attendance_status = (request.data.get("status") or "").strip()
+
+        if not session_id:
+            return Response(
+                {"error": "Session id is mandatory."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        session_id = int(session_id)
 
         try:
             session = AttendanceSession.objects.get(id=session_id)
@@ -307,5 +411,39 @@ class ClosingAttendanceSession(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        session.is_closed = True
-        session.save()
+        bulk_status = attendance_status or "absent"
+
+        try:
+            with transaction.atomic():
+                session.is_closed = True
+                session.save()
+                users = User.objects.filter(is_staff=False)
+                attendance_data = []
+                errors = {}
+
+                errors = {
+                    "message": "These users already have attendance recorded.",
+                    "users": [],
+                }
+                for user in users:
+                    if not Attendance.objects.filter(
+                        user=user, session=session
+                    ).exists():
+                        attendance_data.append(
+                            Attendance(user=user, status=bulk_status, session=session)
+                        )
+                    else:
+                        errors["users"].append(user.username)
+
+                Attendance.objects.bulk_create(attendance_data)
+                response = {
+                    "message": "Attendance ended successfully.",
+                }
+                if errors["users"]:
+                    response["error"] = errors
+                return Response(
+                    response,
+                    status=status.HTTP_200_OK,
+                )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
