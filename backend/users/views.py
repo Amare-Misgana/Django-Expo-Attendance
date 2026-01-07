@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import UserSerializer, ProfileSerializer
 from django.core import signing
-from .models import VerifyEmail, Profile
+from .models import VerifyEmail, Profile, PermissionVerify
 from django.contrib.auth import authenticate
 from django.db import transaction
 from django.conf import settings
@@ -257,6 +257,43 @@ class EditProfileView(APIView):
 
         return Response(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class SendPermissionCodeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if not user.email:
+            return Response(
+                {"error": "User doesn't have email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_permission_verify = PermissionVerify.objects.filter(user=user).first()
+        if old_permission_verify:
+            old_permission_verify.delete()
+
+        try:
+            permission_verify = PermissionVerify.objects.create(user=user)
+            send_mail(
+                subject="Verify your email",
+                message=f"Your permission code is {permission_verify.code}, not that after performing the action, it can't be undone!",
+                from_email=EMAIL,
+                recipient_list=[user.email],
+            )
+        except Exception as e:
+
+            return Response(
+                {"message": f"Unable to send the code{str(e)}."},
+                status=status.HTTP_501_NOT_IMPLEMENTED,
+            )
+
+        return Response(
+            {"message": "verification code sent successfully."},
+            status=status.HTTP_200_OK,
         )
 
 

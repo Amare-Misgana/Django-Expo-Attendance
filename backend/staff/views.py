@@ -2,14 +2,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken   
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from attendance.models import Attendance, AttendanceSession
 from attendance.serializers import AttendanceSerializer, AttendanceSessionSerializer
 from django.core import signing
 from django.db import transaction
-from .models import PermissionVerify
+from users.models import PermissionVerify
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
@@ -98,12 +98,12 @@ class DeleteSessionViaCodeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        old_permission_verify = PermissionVerify.objects.filter(admin=user).first()
+        old_permission_verify = PermissionVerify.objects.filter(user=user).first()
         if old_permission_verify:
             old_permission_verify.delete()
 
         try:
-            permission_verify = PermissionVerify.objects.create(admin=user)
+            permission_verify = PermissionVerify.objects.create(user=user)
             send_mail(
                 subject="Verify your email",
                 message=f"Your permission code is {permission_verify.code}, not that after performing the action, it can't be undone!",
@@ -124,6 +124,11 @@ class DeleteSessionViaCodeView(APIView):
 
     def delete(self, request, session_id):
         code = (request.data.get("code") or "").strip()
+
+        if not AttendanceSession.objects.filter(id=session_id).exists():
+            return Response(
+                {"error": "Session doesn't exist."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         permission_verify = PermissionVerify.objects.filter().first()
         if not permission_verify:
