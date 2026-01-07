@@ -7,6 +7,8 @@ from .views import (
     VerifyCodeView,
     EditProfileView,
     GetUserView,
+    SendPermissionCodeView,
+    RegisterView,
 )
 
 urlpatterns = [
@@ -15,6 +17,8 @@ urlpatterns = [
     path("profile/edit/", EditProfileView.as_view()),
     path("get/<int:user_id>/", UserDetailView.as_view()),
     path("login/", LoginView.as_view()),
+    path("register/", RegisterView.as_view()),
     path("verify/", VerifyCodeView.as_view()),
     path("send-code/", SendVerificationCodeView.as_view()),
+    path("permission/", SendPermissionCodeView.as_view()),
 ]

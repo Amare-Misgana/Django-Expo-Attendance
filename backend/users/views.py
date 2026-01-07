@@ -53,16 +53,49 @@ class UserView(APIView):
         )
 
     def delete(self, request):
+        code = (request.data.get("code") or "").strip()
         user = request.user
-        username = user.username
-        user.delete()
-        return Response(
-            {"message": f"'{username}' deleted successfully."},
-            status=status.HTTP_200_OK,
-        )
+
+        permission_verify = PermissionVerify.objects.filter(user=user).first()
+        if not permission_verify:
+            return Response(
+                {"error": "Permission code not sent yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if permission_verify.is_expired():
+            return Response(
+                {"error": "Permission code is expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not permission_verify.code == code:
+            return Response(
+                {"error": "Invalid permission code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+
+            try:
+                permission_verify.delete()
+                user = request.user
+                username = user.username
+                user.delete()
+                return Response(
+                    {"message": f"'{username}' deleted successfully."},
+                    status=status.HTTP_200_OK,
+                )
+            except Exception as e:
+                return Response(
+                    {"error": str(e)},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
 
 class UserDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
@@ -76,6 +109,9 @@ class UserDetailView(APIView):
 
 
 class UserCodeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, user_id):
         code = (request.data.get("code") or "").strip()
         try:
@@ -280,7 +316,7 @@ class SendPermissionCodeView(APIView):
             permission_verify = PermissionVerify.objects.create(user=user)
             send_mail(
                 subject="Verify your email",
-                message=f"Your permission code is {permission_verify.code}, not that after performing the action, it can't be undone!",
+                message=f"Your permission code is {permission_verify.code}, note that after performing the action, it can't be undone!",
                 from_email=EMAIL,
                 recipient_list=[user.email],
             )
@@ -297,4 +333,20 @@ class SendPermissionCodeView(APIView):
         )
 
 
-# class Register
+class RegisterView(APIView):
+    def post(self, request):
+        user_serializer = UserSerializer(data=request.data)
+
+        user_valid = user_serializer.is_valid()
+
+        if user_valid:
+
+            user_serializer.save()
+            return Response({"user": user_serializer.data}, status=status.HTTP_200_OK)
+
+        return Response(
+            {
+                "errors": user_serializer.errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )

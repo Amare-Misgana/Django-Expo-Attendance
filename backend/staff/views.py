@@ -2,7 +2,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken, AccessToken   
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from attendance.models import Attendance, AttendanceSession
@@ -10,7 +10,6 @@ from attendance.serializers import AttendanceSerializer, AttendanceSessionSerial
 from django.core import signing
 from django.db import transaction
 from users.models import PermissionVerify
-from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
 
@@ -124,16 +123,23 @@ class DeleteSessionViaCodeView(APIView):
 
     def delete(self, request, session_id):
         code = (request.data.get("code") or "").strip()
+        user = request.user
 
         if not AttendanceSession.objects.filter(id=session_id).exists():
             return Response(
                 {"error": "Session doesn't exist."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        permission_verify = PermissionVerify.objects.filter().first()
+        permission_verify = PermissionVerify.objects.filter(user=user).first()
         if not permission_verify:
             return Response(
                 {"error": "Permission code not sent yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if permission_verify.is_expired():
+            return Response(
+                {"error": "Permission code is expired."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -154,7 +160,7 @@ class DeleteSessionViaCodeView(APIView):
                 )
             except AttendanceSession.DoesNotExist:
                 return Response(
-                    {"errors": [{"session": "Session doesn't exist."}]},
+                    {"error": {"session": "Session doesn't exist."}},
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
