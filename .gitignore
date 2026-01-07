@@ -1,5 +1,3 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # =======================
 # Dependencies
 # =======================
@@ -11,15 +9,27 @@ __pycache__/
 *.pyc
 
 # =======================
+# Backend / Django
+# =======================
+backend/.env
+backend/db.sqlite3
+backend/staticfiles/
+backend/media/
+backend/logs/
+backend/*.log
+backend/*.pot
+
+# =======================
 # Expo / React Native
 # =======================
+mobile/.env
 .expo/
 dist/
 web-build/
 expo-env.d.ts
 
 # =======================
-# Native
+# Native / iOS & Android
 # =======================
 .kotlin/
 *.orig.*
@@ -28,6 +38,8 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+/ios
+/android
 
 # =======================
 # Metro
@@ -48,24 +60,11 @@ yarn-error.*
 *.pem
 
 # =======================
-# Django
-# =======================
-db.sqlite3
-staticfiles/
-media/
-logs/
-*.log
-*.pot
-
-# =======================
 # TypeScript
 # =======================
 *.tsbuildinfo
 
 # =======================
-# Generated native folders
+# Misc / Example
 # =======================
-/ios
-/android
-
 app-example
