@@ -19,7 +19,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         model = Attendance
         fields = [
             "id",
-            "attendanded_at",
+            "attended_at",
             "status",
             "reason",
             "session",

@@ -38,6 +38,15 @@ class UserSerializer(serializers.ModelSerializer):
             )
         ],
     )
+    email = serializers.EmailField(
+        required=True,
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(), message="This email is already taken."
+            )
+        ],
+    )
+    is_active = serializers.BooleanField(required=False)
 
     class Meta:
         model = User
@@ -49,6 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "password",
             "last_login",
+            "is_active",
             "date_joined",
             "code",
             "profile",
@@ -86,6 +96,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
+
+        if not self.context["request"].user.is_staff:
+            validated_data.pop("is_active", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

@@ -14,9 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import environ
 
-env = environ.Env(
-    DEBUG=(bool, True),
-)
+env = environ.Env()
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -31,9 +29,10 @@ environ.Env.read_env(str(BASE_DIR / ".env"))
 SECRET_KEY = "django-insecure-l961m3$1ps-_3$xu^+f4fk&ms*apel37e5dm@@ot*hp!pma&t)"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG")
+DEBUG = env.bool("DEBUG")
 
-ALLOWED_HOSTS = []
+
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -94,6 +93,11 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+if not DEBUG:
+    import dj_database_url
+
+    DATABASES["default"] = dj_database_url.parse(env("DATABASE_URL"))
 
 
 # Password validation
@@ -190,11 +194,11 @@ SIMPLE_JWT = {
 IS_TWOFA_MANDATORY = True
 
 
-# Email smtp
 # Source - https://stackoverflow.com/a/73013598
 # Posted by diml
 # Retrieved 2026-01-07, License - CC BY-SA 4.0
 
+# Email smtp
 EMAIL_BACKEND = env("EMAIL_BACKEND")
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env.int("EMAIL_PORT")

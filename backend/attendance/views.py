@@ -57,3 +57,32 @@ class SessionDetailView(APIView):
                 {"errors": [{"session": "Session doesn't exist."}]},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+class AttendanceStatsView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        data = {
+            "total_sessions": AttendanceSession.objects.all().count(),
+            "total_closed_sessions": AttendanceSession.objects.filter(
+                is_closed=True
+            ).count(),
+            "total_open_sessions": AttendanceSession.objects.filter(
+                is_closed=False
+            ).count(),
+            "total_present": Attendance.objects.filter(
+                session__is_closed=True, status="present"
+            ).count(),
+            "total_late": Attendance.objects.filter(
+                session__is_closed=True, status="late"
+            ).count(),
+            "total_absent": Attendance.objects.filter(
+                session__is_closed=True, status="absent"
+            ).count(),
+            "total_special_case": Attendance.objects.filter(
+                session__is_closed=True, status="special_case"
+            ).count(),
+        }
+        return Response({"data": data}, status=status.HTTP_200_OK)

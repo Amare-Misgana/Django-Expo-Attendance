@@ -402,8 +402,7 @@ class EndAttendanceSession(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminUser]
 
-    def post(self, request):
-        session_id = request.data.get("session_id") or None
+    def post(self, request, session_id):
         attendance_status = (request.data.get("status") or "").strip()
 
         if not session_id:
@@ -509,3 +508,59 @@ class DeleteUsersView(APIView):
                     {"error": str(e)},
                     status=status.HTTP_404_NOT_FOUND,
                 )
+
+
+class ClosedSessionAttendanceView(APIView):
+    def get(self, request):
+        attendances = Attendance.objects.filter(session__is_closed=True).select_related(
+            "user", "session"
+        )
+
+        serializer = AttendanceSerializer(attendances, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class EditAttendanceRecoredView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, attendance_id):
+        user_id = request.data.get("user_id") or None
+        attendance_status = (request.data.get("status") or "").strip()
+        reason = (request.data.get("reason") or "").strip()
+
+        if not attendance_status:
+            return Response(
+                {"error": "Status is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if attendance_status not in ["present", "absent", "late", "special_case"]:
+            return Response(
+                {"error": "Inavlid status."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if attendance_status == "special_case":
+            if not reason:
+                return Response(
+                    {"error": "Reason is required."}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+        try:
+            user = User.objects.get(id=user_id)
+            attendance = Attendance.objects.get(id=attendance_id, user=user)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User doesn't exist."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Attendance.DoesNotExist:
+            return Response(
+                {"error": "Attendance recored doesn't exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        attendance.status = attendance_status
+        attendance.reason = reason
+        attendance.save()
+        return Response(
+            {"message": "Attendace updated successfully."}, status=status.HTTP_200_OK
+        )
