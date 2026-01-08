@@ -6,6 +6,8 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
+import { AuthProvider } from "./contexts/AuthContext";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -17,23 +19,26 @@ export default function RootLayout() {
     "Poppins-SemiBold": require("@/assets/fonts/poppins.semibold.ttf"),
   });
 
-  if (!fontsLoaded) return null; // wait for fonts to load
+  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: colorTheme.backgroundEdge }}>
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <Stack
-            screenOptions={{
-              headerStyle: {
-                backgroundColor: colorTheme.backgroundEdge,
-              },
-            }}
-          >
-            <Stack.Screen name="home" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: true, title: "Login" }} />
-          </Stack>
-          <StatusBar style="auto" backgroundColor={colorTheme.backgroundEdge} />
+          <AuthProvider>
+            <Stack
+              screenOptions={{
+                headerStyle: {
+                  backgroundColor: colorTheme.backgroundEdge,
+                },
+              }}
+            >
+              <Stack.Screen name="home" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: true, title: "Login" }} />
+            </Stack>
+            <StatusBar style="auto" backgroundColor={colorTheme.backgroundEdge} />
+          </AuthProvider>
+          <Toast /> {/* Toast provider added here */}
         </ThemeProvider>
       </SafeAreaView>
     </SafeAreaProvider>
