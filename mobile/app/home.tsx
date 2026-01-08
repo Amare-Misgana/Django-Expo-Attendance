@@ -1,6 +1,7 @@
 import { ThemedButton } from "@/components/themed-btn";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { router } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, View } from "react-native";
 
@@ -16,7 +17,14 @@ const HomePage = () => {
       <Image source={require("../assets/images/attendance.png")} style={styles.attendanceImg} />
       <View style={styles.ctaContainer}>
         <View style={styles.cta}>
-          <ThemedButton title="Login" outline style={styles.loginBtn} />
+          <ThemedButton
+            title="Login"
+            outline
+            style={styles.loginBtn}
+            onPress={() => {
+              router.push("/login");
+            }}
+          />
           <ThemedButton title="Register" style={styles.registerBtn} />
         </View>
       </View>

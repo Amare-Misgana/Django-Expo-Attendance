@@ -16,7 +16,8 @@ export const Colors = {
     textSecondary: '#303030',
     textLast: '#525252',
 
-    background: '#FFFFFF',
+    background: '#f5f5f5ff',
+    backgroundEdge: "#fafafaff",
     surface: '#F6F6F6',
 
     tint: tintColorLight,
@@ -41,6 +42,7 @@ export const Colors = {
     textLast: '#9A9A9A',
 
     background: '#151718',
+    backgroundEdge: '#161718ff',
     surface: '#1E2022',
 
     tint: tintColorDark,

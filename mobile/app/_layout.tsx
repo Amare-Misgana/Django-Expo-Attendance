@@ -21,13 +21,19 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colorTheme.background }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colorTheme.backgroundEdge }}>
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <Stack>
+          <Stack
+            screenOptions={{
+              headerStyle: {
+                backgroundColor: colorTheme.backgroundEdge,
+              },
+            }}
+          >
             <Stack.Screen name="home" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: true, title: "Login" }} />
           </Stack>
-          <StatusBar style="auto" />
+          <StatusBar style="auto" backgroundColor={colorTheme.backgroundEdge} />
         </ThemeProvider>
       </SafeAreaView>
     </SafeAreaProvider>
