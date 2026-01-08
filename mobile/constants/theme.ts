@@ -1,27 +1,47 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#FD8A6B';
+const tintColorDark = '#FA5C5C';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    primary: '#FA5C5C',
+    secondary: '#FD8A6B',
+    accent: '#FBEF76',
+
+    textPrimary: '#11181C',
+    textSecondary: '#303030',
+    textLast: '#525252',
+
+    background: '#FFFFFF',
+    surface: '#F6F6F6',
+
     tint: tintColorLight,
+
     icon: '#687076',
+    border: '#E0E0E0',
+
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
   },
+
   dark: {
-    text: '#ECEDEE',
+    primary: '#FA5C5C',
+    secondary: '#FD8A6B',
+    accent: '#FBEF76',
+
+    textPrimary: '#ECEDEE',
+    textSecondary: '#C7C7C7',
+    textLast: '#9A9A9A',
+
     background: '#151718',
+    surface: '#1E2022',
+
     tint: tintColorDark,
+
     icon: '#9BA1A6',
+    border: '#2A2D2F',
+
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
@@ -29,25 +49,21 @@ export const Colors = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: 'Poppins',
+    serif: 'Poppins',
+    rounded: 'Poppins',
+    mono: 'Poppins',
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+  android: {
+    sans: 'Poppins',
+    serif: 'Poppins',
+    rounded: 'Poppins',
+    mono: 'Poppins',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    sans: 'Poppins, system-ui, sans-serif',
+    serif: 'Poppins, serif',
+    rounded: 'Poppins, system-ui, sans-serif',
+    mono: 'monospace',
   },
 });
