@@ -6,8 +6,11 @@ const tintColorDark = '#FA5C5C';
 export const Colors = {
   light: {
     primary: '#FA5C5C',
+    primaryDisabled: '#FAD1D1',
     secondary: '#FD8A6B',
+    secondaryDisabled: '#FDE2C7',
     accent: '#FBEF76',
+    accentDisabled: '#FFF7C2',
 
     textPrimary: '#11181C',
     textSecondary: '#303030',
@@ -27,11 +30,14 @@ export const Colors = {
 
   dark: {
     primary: '#FA5C5C',
+    primaryDisabled: '#7A3C3C',
     secondary: '#FD8A6B',
+    secondaryDisabled: '#7A4C3C',
     accent: '#FBEF76',
+    accentDisabled: '#7A793C',
 
     textPrimary: '#ECEDEE',
-    textSecondary: '#C7C7C7',
+    textSecondary: '#acacacff',
     textLast: '#9A9A9A',
 
     background: '#151718',
