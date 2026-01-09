@@ -1,3 +1,4 @@
+import { toastConfig } from "@/components/toastConfig";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
@@ -35,10 +36,13 @@ export default function RootLayout() {
             >
               <Stack.Screen name="home" options={{ headerShown: false }} />
               <Stack.Screen name="login" options={{ headerShown: true, title: "Login" }} />
+              <Stack.Screen name="sendOtp" options={{ headerShown: true, title: "Send OTP" }} />
+              <Stack.Screen name="verifyOtp" options={{ headerShown: true, title: "Verify Code" }} />
+              <Stack.Screen name="(admin)" options={{ headerShown: false }} />
             </Stack>
             <StatusBar style="auto" backgroundColor={colorTheme.backgroundEdge} />
           </AuthProvider>
-          <Toast /> {/* Toast provider added here */}
+          <Toast config={toastConfig} />
         </ThemeProvider>
       </SafeAreaView>
     </SafeAreaProvider>

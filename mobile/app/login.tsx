@@ -2,6 +2,7 @@ import { ThemedButton } from "@/components/themed-btn";
 import { ThemedInput } from "@/components/themed-input";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet } from "react-native";
 import Toast from "react-native-toast-message";
@@ -24,7 +25,14 @@ const LoginPage = () => {
         text1: "Login Failed",
         text2: err.response?.data?.error || "Something went wrong",
       });
-      console.log("Login failed:", JSON.stringify(err.response?.data ?? { message: err.message }, null, 2));
+      const verify = err.response?.data?.verify;
+      if (verify) {
+        router.navigate({
+          pathname: "/sendOtp",
+          params: { username: username.trim() },
+        });
+      }
+      console.log("Login failed:", JSON.stringify(err.response.data, null, 2));
     }
     setLoading(false);
   };

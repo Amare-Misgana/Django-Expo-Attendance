@@ -10,6 +10,7 @@ export type User = {
   email: string;
   date_joined: string;
   is_active: boolean;
+  is_staff: boolean;
   profile_pic_id: string | null;
   profile_pic_url: string | null;
   code: string;
@@ -21,6 +22,7 @@ type AuthContextType = {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
+  setTokens: (tokens: { access: string; refresh: string }) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -29,7 +31,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Try to load user on app start
     (async () => {
       const token = await SecureStore.getItemAsync("access_token");
       const storedUser = await SecureStore.getItemAsync("user");
@@ -40,11 +41,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (username: string, password: string) => {
     const response = await api.post("/api/users/login/", { username, password });
     const { access, refresh } = response.data;
+    await setTokens({ access, refresh });
 
-    await SecureStore.setItemAsync("access_token", access);
-    await SecureStore.setItemAsync("refresh_token", refresh);
-
-    // Fetch user data
     const userResponse = await api.get("/api/users/", {
       headers: { Authorization: `Bearer ${access}` },
     });
@@ -71,7 +69,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return await SecureStore.getItemAsync("access_token");
   };
 
-  return <AuthContext.Provider value={{ user, login, logout, getAccessToken }}>{children}</AuthContext.Provider>;
+  const setTokens = async ({ access, refresh }: { access: string; refresh: string }) => {
+    await SecureStore.setItemAsync("access_token", access);
+    await SecureStore.setItemAsync("refresh_token", refresh);
+  };
+
+  return <AuthContext.Provider value={{ user, login, logout, getAccessToken, setTokens }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

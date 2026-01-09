@@ -25,7 +25,13 @@ const HomePage = () => {
               router.push("/login");
             }}
           />
-          <ThemedButton title="Register" style={styles.registerBtn} />
+          <ThemedButton
+            title="Register"
+            style={styles.registerBtn}
+            onPress={() => {
+              router.push("/dashboard");
+            }}
+          />
         </View>
       </View>
     </ThemedView>
